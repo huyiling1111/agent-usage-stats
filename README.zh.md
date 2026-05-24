@@ -1,12 +1,12 @@
-# agent-usage-stats — AI Agent Token 消耗统计工具
+# ai-agent-usage-stats — AI Agent Token 消耗统计工具
 
 [中文](README.md) | [English](README.en.md)
 
 统计本机 AI 编程助手的 token 消耗，支持多 Agent、多模型、多时间段查询与导出。
 
-## 为什么选择 agent-usage-stats
+## 为什么选择 ai-agent-usage-stats
 
-`agent-usage-stats` 直接读取本地数据，跨 Agent、跨模型、跨平台运行。零依赖，纯 Python 标准库。
+`ai-agent-usage-stats` 直接读取本地数据，跨 Agent、跨模型、跨平台运行。零依赖，纯 Python 标准库。
 
 | 功能 | 命令 | 说明 |
 |------|------|------|
@@ -24,7 +24,7 @@
 
 ### 1. Python 3.11+
 
-`agent-usage-stats` 本身是纯 Python 脚本，依赖标准库（含 `tomllib` 用于模型价格配置），不需要额外 pip 装任何包。
+`ai-agent-usage-stats` 本身是纯 Python 脚本，依赖标准库（含 `tomllib` 用于模型价格配置），不需要额外 pip 装任何包。
 
 ```bash
 # 检查已安装（Windows 用户用 python --version）
@@ -35,7 +35,7 @@ python3 --version
 
 ### 2. Node.js（安装工具时需要）
 
-`agent-usage-stats` 通过 **ClawHub CLI** 安装。ClawHub 是个 Node.js 命令行工具。
+`ai-agent-usage-stats` 通过 **ClawHub CLI** 安装。ClawHub 是个 Node.js 命令行工具。
 
 ```bash
 # 检查已安装
@@ -64,25 +64,25 @@ clawhub -V          # 显示版本号
 
 ### 数据范围
 
-> ⚠️ `agent-usage-stats` **仅统计本机数据，不跨机器汇总**。
+> ⚠️ `ai-agent-usage-stats` **仅统计本机数据，不跨机器汇总**。
 >
 > - **同一把 API Key 用在多台机器 → 每台机器的统计互不相通**
 > - 例：API Key 同时在 PC A 和 PC B 用，PC A 的 `agent-usage-stats` 只看得到 PC A 的用量
 > - `agent-usage-stats` 不联网、不查 API 后台，纯读本地磁盘文件
-> - 要看另一台机器的统计，请在那台机器上也安装 `agent-usage-stats`
+> - 要看另一台机器的统计，请在那台机器上也安装 `ai-agent-usage-stats`
 >
 > 🕐 **时区说明**：`--today` / `--yesterday` 等时间段基于**本机系统时区**。例如北京时间 (UTC+8) 的 `--today` 统计范围为当日 00:00~23:59 CST。跨时区机器看到的数据范围不同。
 
 ### API 中转站
 
-通过中转站访问大模型时，统计准确性取决于中转站是否**原样透传** API 返回的 `usage` 字段。`agent-usage-stats` 只记录 Agent 本地写入的数据，不校验与上游 API 是否一致。
+通过中转站访问大模型时，统计准确性取决于中转站是否**原样透传** API 返回的 `usage` 字段。`ai-agent-usage-stats` 只记录 Agent 本地写入的数据，不校验与上游 API 是否一致。
 
 ### 统计原理
 
-`agent-usage-stats` 读取各 Agent 写入本地的数据文件（SQLite / JSONL），按模型聚合 `usage` 对象中的 `input_tokens`、`output_tokens`、`cache_read_tokens` 和调用次数。数据链路：
+`ai-agent-usage-stats` 读取各 Agent 写入本地的数据文件（SQLite / JSONL），按模型聚合 `usage` 对象中的 `input_tokens`、`output_tokens`、`cache_read_tokens` 和调用次数。数据链路：
 
 ```
-API 返回 usage → Agent 写入本地 → agent-usage-stats 读取汇总
+API 返回 usage → Agent 写入本地 → ai-agent-usage-stats 读取汇总
 ```
 
 统计结果可能与 API 结算后台存在偏差，原因：
@@ -99,7 +99,7 @@ API 返回 usage → Agent 写入本地 → agent-usage-stats 读取汇总
 
 所有参与缓存系统的 prompt tokens 中，命中缓存（直接从缓存读取）的比例。
 
-**agent-usage-stats 计算方式**：各 Agent 底层 API 不同，采用自适应公式：
+**ai-agent-usage-stats 计算方式**：各 Agent 底层 API 不同，采用自适应公式：
 
 ```
 如果 cache > input:  缓存率 = cache / (cache + input)   ← DeepSeek API（input = cache_miss）
@@ -163,18 +163,20 @@ cache_tokens = cache             # cache 就是 cacheHit
 
 环境就绪后，执行以下命令完成安装：
 
+> 安装包名是 `ai-agent-usage-stats`；安装完成后的命令仍是 `agent-usage-stats`。
+
 **macOS / Linux：**
 ```bash
 cd ~
-clawhub install agent-usage-stats
-python3 ~/skills/agent-usage-stats/agent-usage-stats.py setup
+clawhub install ai-agent-usage-stats
+python3 ~/skills/ai-agent-usage-stats/agent-usage-stats.py setup
 ```
 
 **Windows（PowerShell）：**
 ```powershell
 cd ~
-clawhub install agent-usage-stats
-python $HOME\skills\agent-usage-stats\agent-usage-stats.py setup
+clawhub install ai-agent-usage-stats
+python $HOME\skills\ai-agent-usage-stats\agent-usage-stats.py setup
 ```
 
 > `cd ~` 确保技能安装到用户主目录（所有系统都有写入权限）。
@@ -222,14 +224,14 @@ agent-usage-stats -a claude-code
 ```bash
 agent-usage-stats update
 # 或
-clawhub update agent-usage-stats
+clawhub update ai-agent-usage-stats
 ```
 
 > `update` 原地替换文件，包装器和 PATH 均无需重配。
 
 > 💡 更新后版本没变？加 `--force` 强制拉取：
 > ```
-> clawhub install agent-usage-stats --force
+> clawhub install ai-agent-usage-stats --force
 > ```
 
 ---
@@ -659,7 +661,7 @@ agent-usage-stats -v
 agent-usage-stats --version
 ```
 
-**把 agent-usage-stats 更新到最新版：**
+**把 ai-agent-usage-stats 更新到最新版：**
 
 ```bash
 agent-usage-stats update
@@ -668,17 +670,17 @@ agent-usage-stats update
 如果更新后版本号没变，用强制重装：
 
 ```bash
-clawhub install agent-usage-stats --force
+clawhub install ai-agent-usage-stats --force
 ```
 
-**卸载 agent-usage-stats：**
+**卸载 ai-agent-usage-stats：**
 
 ```bash
 # 第 1 步：清理全局命令 + PATH
 agent-usage-stats --uninstall
 
 # 第 2 步：移除技能文件
-clawhub uninstall agent-usage-stats
+clawhub uninstall ai-agent-usage-stats
 ```
 
 ---
@@ -747,7 +749,7 @@ Agent 跑在 WSL2 中时，`agent-usage-stats` 在 Windows 侧自动检测并读
 agent-usage-stats --uninstall
 
 # 第 2 步：移除技能文件
-clawhub uninstall agent-usage-stats
+clawhub uninstall ai-agent-usage-stats
 ```
 
 > `--uninstall` 会自动删除包装器、清理 PATH 条目、删除配置文件。三平台统一。
@@ -773,7 +775,7 @@ clawhub uninstall agent-usage-stats
 
 ### 安装问题
 
-#### ❓ `clawhub install agent-usage-stats` 报错
+#### ❓ `clawhub install ai-agent-usage-stats` 报错
 
 **可能原因：网络问题或 Node.js 版本过旧。**
 
@@ -798,7 +800,7 @@ npm install -g clawhub --registry=https://registry.npmmirror.com
 **解决：**
 ```bash
 cd ~
-clawhub install agent-usage-stats --force
+clawhub install ai-agent-usage-stats --force
 ```
 
 然后按上方安装指引执行 `setup`。主目录 (`~`) 在所有系统上都有写入权限，不会出现权限问题。
@@ -816,10 +818,10 @@ python: can't open file 'C:\\Users\\xxx\\~\\skills\\...': No such file or direct
 **解决：用 `$HOME` 替代 `~`：**
 ```powershell
 # ❌ 错误
-python ~\skills\agent-usage-stats\agent-usage-stats.py setup
+python ~\skills\ai-agent-usage-stats\agent-usage-stats.py setup
 
 # ✅ 正确
-python $HOME\skills\agent-usage-stats\agent-usage-stats.py setup
+python $HOME\skills\ai-agent-usage-stats\agent-usage-stats.py setup
 ```
 
 > `$HOME` 是 PowerShell 内置变量，始终展开为当前用户目录。
@@ -856,7 +858,7 @@ $env:PATH += ';' + "$env:USERPROFILE\.local\bin"
 ```bash
 chmod +x ~/.local/bin/agent-usage-stats
 # 或者重新执行 setup
-python3 ~/skills/agent-usage-stats/agent-usage-stats.py setup
+python3 ~/skills/ai-agent-usage-stats/agent-usage-stats.py setup
 ```
 
 > Windows 用户不受此问题影响（`.cmd` 文件不需要执行权限）。

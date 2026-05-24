@@ -1,4 +1,4 @@
-# agent-usage-stats — Pick an Agent, See Its Token Burn
+# ai-agent-usage-stats — Pick an Agent, See Its Token Burn
 
 [中文](README.md) | [English](README.en.md)
 
@@ -7,19 +7,19 @@ Run it, pick an agent, see the stats. Every time.
 ## What's this?
 
 You have multiple AI assistants on your machine (Hermes, Claude Code, CodeX, OpenClaw…).
-`agent-usage-stats` lets you **choose one and see how many tokens it's consuming**.
+`ai-agent-usage-stats` lets you **choose one and see how many tokens it's consuming**.
 
 > ⚠️ **Important: this tool only reads local agent data on this machine.**
 > If you run agents on different PCs or servers, each machine stores its own data
-> and needs its own installation of `agent-usage-stats`. Cross-machine statistics are not supported.
+> and needs its own installation of `ai-agent-usage-stats`. Cross-machine statistics are not supported.
 >
 > All statistics are queried based on the specific agent you select, not a global total.
 
 ---
 
-## Why agent-usage-stats
+## Why ai-agent-usage-stats
 
-`agent-usage-stats` reads local data directly — works across agents, models, and platforms. Zero dependencies, pure Python stdlib.
+`ai-agent-usage-stats` reads local data directly — works across agents, models, and platforms. Zero dependencies, pure Python stdlib.
 
 | Feature | Command | Description |
 |---------|---------|-------------|
@@ -33,11 +33,11 @@ You have multiple AI assistants on your machine (Hermes, Claude Code, CodeX, Ope
 
 ## Environment Requirements
 
-Before installing `agent-usage-stats`, make sure you have these:
+Before installing `ai-agent-usage-stats`, make sure you have these:
 
 ### 1. Python 3.8+
 
-`agent-usage-stats` is a pure Python script using only stdlib — no pip packages needed.
+`ai-agent-usage-stats` is a pure Python script using only stdlib — no pip packages needed.
 
 ```bash
 # Check (Windows users: use python --version)
@@ -48,7 +48,7 @@ python3 --version
 
 ### 2. Node.js (needed for the installer)
 
-`agent-usage-stats` is distributed via **ClawHub CLI**, a Node.js command-line tool.
+`ai-agent-usage-stats` is distributed via **ClawHub CLI**, a Node.js command-line tool.
 
 ```bash
 # Check
@@ -82,18 +82,20 @@ clawhub -V          # show version
 
 After meeting the requirements above, two commands:
 
+> The install package is `ai-agent-usage-stats`; the installed command remains `agent-usage-stats`.
+
 **macOS / Linux:**
 ```bash
 cd ~
-clawhub install agent-usage-stats
-python3 ~/skills/agent-usage-stats/agent-usage-stats.py setup
+clawhub install ai-agent-usage-stats
+python3 ~/skills/ai-agent-usage-stats/agent-usage-stats.py setup
 ```
 
 **Windows (PowerShell):**
 ```powershell
 cd ~
-clawhub install agent-usage-stats
-python $HOME\skills\agent-usage-stats\agent-usage-stats.py setup
+clawhub install ai-agent-usage-stats
+python $HOME\skills\ai-agent-usage-stats\agent-usage-stats.py setup
 ```
 
 > `cd ~` ensures the skill installs to your home directory (always writable on all OSes).
@@ -131,7 +133,7 @@ If all three checks produce output, installation is successful 🎉
 ## Updating
 
 ```bash
-clawhub update agent-usage-stats
+clawhub update ai-agent-usage-stats
 agent-usage-stats --version
 ```
 
@@ -139,7 +141,7 @@ agent-usage-stats --version
 
 > 💡 Version not changing? Use `--force` to pull the latest:
 > ```
-> clawhub install agent-usage-stats --force
+> clawhub install ai-agent-usage-stats --force
 > ```
 
 
@@ -402,17 +404,17 @@ agent-usage-stats update
 If the version doesn't change after update, force reinstall:
 
 ```bash
-clawhub install agent-usage-stats --force
+clawhub install ai-agent-usage-stats --force
 ```
 
-**Uninstall agent-usage-stats:**
+**Uninstall ai-agent-usage-stats:**
 
 ```bash
 # Step 1: Remove wrapper + PATH
 agent-usage-stats --uninstall
 
 # Step 2: Remove skill files
-clawhub uninstall agent-usage-stats
+clawhub uninstall ai-agent-usage-stats
 ```
 
 ---
@@ -520,7 +522,7 @@ agent-usage-stats -a hermes,claude-code --month
 agent-usage-stats --uninstall
 
 # Step 2: Remove skill files
-clawhub uninstall agent-usage-stats
+clawhub uninstall ai-agent-usage-stats
 ```
 
 > `--uninstall` automatically removes the wrapper, cleans the PATH entry, and deletes config files. Works on all platforms.
@@ -546,7 +548,7 @@ clawhub uninstall agent-usage-stats
 
 ### Installation issues
 
-#### ❓ `clawhub install agent-usage-stats` fails
+#### ❓ `clawhub install ai-agent-usage-stats` fails
 
 **Possible cause: network issue or outdated Node.js.**
 
@@ -571,7 +573,7 @@ npm install -g clawhub --registry=https://registry.npmmirror.com
 **Fix:**
 ```bash
 cd ~
-clawhub install agent-usage-stats --force
+clawhub install ai-agent-usage-stats --force
 ```
 
 Then follow the install steps above. The home directory (`~`) is always writable on all OSes.
@@ -589,10 +591,10 @@ python: can't open file 'C:\\Users\\xxx\\~\\skills\\...': No such file or direct
 **Fix: use `$HOME` instead of `~`:**
 ```powershell
 # ❌ Wrong
-python ~\skills\agent-usage-stats\agent-usage-stats.py setup
+python ~\skills\ai-agent-usage-stats\agent-usage-stats.py setup
 
 # ✅ Correct
-python $HOME\skills\agent-usage-stats\agent-usage-stats.py setup
+python $HOME\skills\ai-agent-usage-stats\agent-usage-stats.py setup
 ```
 
 > `$HOME` is a built-in PowerShell variable that always expands to the current user directory.
@@ -629,7 +631,7 @@ $env:PATH += ';' + "$env:USERPROFILE\.local\bin"
 ```bash
 chmod +x ~/.local/bin/agent-usage-stats
 # Or just re-run setup
-python3 ~/skills/agent-usage-stats/agent-usage-stats.py setup
+python3 ~/skills/ai-agent-usage-stats/agent-usage-stats.py setup
 ```
 
 > Windows users are not affected (`.cmd` files don't need execute permission).
@@ -687,8 +689,8 @@ agent-usage-stats -a hermes --export
 **Fix for all OSes:**
 ```bash
 cd ~
-clawhub install agent-usage-stats --force
-python3 ~/skills/agent-usage-stats/agent-usage-stats.py setup   # Windows: python $HOME\skills\...
+clawhub install ai-agent-usage-stats --force
+python3 ~/skills/ai-agent-usage-stats/agent-usage-stats.py setup   # Windows: python $HOME\skills\...
 agent-usage-stats --version
 ```
 
@@ -700,9 +702,9 @@ This ensures the skill is installed to `~/skills/` — the predictable home-dire
 
 **Notable data:** 0 tokens + non-zero call count → confirms usage recording is missing at the source.
 
-**Resolution:** This is an OpenClaw data recording limitation, not a agent-usage-stats bug. Token-stats reads whatever the agent wrote down. Options:
+**Resolution:** This is an OpenClaw data recording limitation, not an ai-agent-usage-stats bug. Token-stats reads whatever the agent wrote down. Options:
 - Upgrade OpenClaw to a newer version that records token usage
-- No workaround available in agent-usage-stats itself
+- No workaround available in ai-agent-usage-stats itself
 
 #### ❓ `--compare` shows no data for both periods
 
@@ -710,25 +712,25 @@ This ensures the skill is installed to `~/skills/` — the predictable home-dire
 
 ### Data scope
 
-> ⚠️ `agent-usage-stats` **only reads local data. No cross-machine aggregation.**
+> ⚠️ `ai-agent-usage-stats` **only reads local data. No cross-machine aggregation.**
 >
 > - **Same API key on multiple machines? → Each machine's stats are isolated**
 > - Example: Same key used on PC A and PC B → PC A's `agent-usage-stats` only sees PC A's usage
 > - `agent-usage-stats` reads disk files — no network calls, no API dashboard queries
-> - To see another machine's stats, install `agent-usage-stats` there too
+> - To see another machine's stats, install `ai-agent-usage-stats` there too
 >
 > 🕐 **Timezone**: `--today` / `--yesterday` use your **local system timezone**. E.g. on UTC+8 (Beijing), `--today` spans 00:00–23:59 CST. Machines in different timezones see different ranges.
 
 ### API Relay
 
-Stats accuracy depends on whether the relay **passes through** the real API's `usage` field unchanged. `agent-usage-stats` reads what your Agent wrote locally — it does not verify against the real API.
+Stats accuracy depends on whether the relay **passes through** the real API's `usage` field unchanged. `ai-agent-usage-stats` reads what your Agent wrote locally — it does not verify against the real API.
 
 ### How It Works
 
-`agent-usage-stats` reads local data files (SQLite / JSONL) written by each Agent, aggregating `input_tokens`, `output_tokens`, `cache_read_tokens`, and call counts from the `usage` object.
+`ai-agent-usage-stats` reads local data files (SQLite / JSONL) written by each Agent, aggregating `input_tokens`, `output_tokens`, `cache_read_tokens`, and call counts from the `usage` object.
 
 ```
-API returns usage → Agent writes locally → agent-usage-stats reads & aggregates
+API returns usage → Agent writes locally → ai-agent-usage-stats reads & aggregates
 ```
 
 Results may differ from your API billing dashboard because:

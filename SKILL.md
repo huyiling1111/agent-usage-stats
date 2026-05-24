@@ -1,11 +1,11 @@
 ---
-name: agent-usage-stats
+name: ai-agent-usage-stats
 description: "选择要监控的 AI 助手 → 查看 token 消耗。支持 Hermes / Claude Code / CodeX / OpenClaw，每次都让你选"
 version: 2.6.1
 author: huyiling1111
 license: MIT
-source: https://github.com/huyiling1111/agent-usage-stats
-clawhub: https://clawhub.ai/huyiling1111/agent-usage-stats
+source: https://github.com/huyiling1111/ai-agent-usage-stats
+clawhub: https://clawhub.ai/huyiling1111/ai-agent-usage-stats
 tags:
   - token
   - usage
@@ -14,7 +14,7 @@ tags:
   - interactive
 ---
 
-# agent-usage-stats — 选个 Agent 看它的消耗
+# ai-agent-usage-stats — 选个 Agent 看它的消耗
 
 ## 核心原则
 
@@ -26,7 +26,7 @@ tags:
 
 - Python 3.11+
 - 至少一种 Agent 有使用记录：Hermes / Claude Code / CodeX / OpenClaw
-- 安装方式：`clawhub install agent-usage-stats`，然后 `python3 ~/skills/agent-usage-stats/agent-usage-stats.py setup`
+- 安装方式：`clawhub install ai-agent-usage-stats`，然后 `python3 ~/skills/ai-agent-usage-stats/agent-usage-stats.py setup`
 
 ## 用法速查
 

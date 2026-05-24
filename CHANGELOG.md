@@ -40,7 +40,7 @@
 
 ### 已知限制
 
-- **DeepSeek Anthropic 端点费用偏差**：Claude Code 通过 `api.deepseek.com/anthropic` 使用 DeepSeek 模型时，API 返回的 `usage`（记录在 JSONL 中）与实际计费 tokens 使用不同 tokenizer 计数，导致预估费用偏高约 2-3 倍。此偏差源于 API 端点行为，非 agent-usage-stats 计算公式或价格错误。直接使用 DeepSeek 原生 API（如 Hermes）的费用预估是准确的。
+- **DeepSeek Anthropic 端点费用偏差**：Claude Code 通过 `api.deepseek.com/anthropic` 使用 DeepSeek 模型时，API 返回的 `usage`（记录在 JSONL 中）与实际计费 tokens 使用不同 tokenizer 计数，导致预估费用偏高约 2-3 倍。此偏差源于 API 端点行为，非 ai-agent-usage-stats 计算公式或价格错误。直接使用 DeepSeek 原生 API（如 Hermes）的费用预估是准确的。
 
 ## v2.5.8 (2026-05-22)
 
@@ -160,7 +160,7 @@
 
 ### 新增
 - **CSV 导出**：简单/年度 × 单/多 Agent 全覆盖
-- **`agent-usage-stats update`**：自更新指令，调用 `clawhub update agent-usage-stats`
+- **`agent-usage-stats update`**：自更新指令，调用 `clawhub update ai-agent-usage-stats`
 
 ## v2.4.2 (2026-05-20)
 

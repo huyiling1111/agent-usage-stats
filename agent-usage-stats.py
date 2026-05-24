@@ -32,7 +32,7 @@ agent-usage-stats — 选个 Agent 看它的 token 消耗
   agent-usage-stats -a hermes --detail
 
 安装:
-  clawhub install agent-usage-stats
+  clawhub install ai-agent-usage-stats
   agent-usage-stats setup              创建全局命令并自动加入 PATH
   agent-usage-stats --uninstall         删除全局命令并清理 PATH
 """
@@ -4359,7 +4359,7 @@ def main():
     agent-usage-stats --list-backends       列出已安装的 Agent
 
   安装与卸载:
-    clawhub install agent-usage-stats  从 ClawHub 安装
+    clawhub install ai-agent-usage-stats  从 ClawHub 安装
     agent-usage-stats --setup                创建全局命令 + 自动加入 PATH
     agent-usage-stats --uninstall            删除全局命令 + 自动清理 PATH
     agent-usage-stats update                 通过 clawhub update 更新到最新版本
@@ -4528,7 +4528,7 @@ def main():
             print(f"✅ 已清理配置文件: {config_dir}")
 
         print()
-        print("卸载完成。如需彻底删除技能文件，请执行: clawhub uninstall agent-usage-stats")
+        print("卸载完成。如需彻底删除技能文件，请执行: clawhub uninstall ai-agent-usage-stats")
         return
 
     # ── update ──
@@ -4599,7 +4599,7 @@ def main():
         try:
             old_ver = VERSION
             result = subprocess.run(
-                [clawhub_exe, "update", "agent-usage-stats", "--no-input"],
+                [clawhub_exe, "update", "ai-agent-usage-stats", "--no-input"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 timeout=120,
             )
@@ -4608,7 +4608,7 @@ def main():
                 print(output)
 
             if result.returncode != 0:
-                print(f"⚠️ 更新可能失败 (exit {result.returncode})，请手动执行: clawhub update agent-usage-stats")
+                print(f"⚠️ 更新可能失败 (exit {result.returncode})，请手动执行: clawhub update ai-agent-usage-stats")
                 return
 
             # 搜索 ClawHub 安装的新文件（不同平台/版本路径可能不同）
@@ -4616,7 +4616,7 @@ def main():
             search_dirs = [
                 os.path.join(script_dir, "skills", "agent-usage-stats"),
                 os.path.join(os.path.expanduser("~"), "skills", "agent-usage-stats"),
-                os.path.join(os.path.expanduser("~"), ".clawhub", "skills", "agent-usage-stats"),
+                os.path.join(os.path.expanduser("~"), ".clawhub", "skills", "ai-agent-usage-stats"),
             ]
             updated_src = None
             for d in search_dirs:
@@ -4629,7 +4629,7 @@ def main():
             if updated_src is None:
                 print("  ⏳ 常规更新未生效，尝试强制重装...")
                 result2 = subprocess.run(
-                    [clawhub_exe, "install", "agent-usage-stats", "--force"],
+                    [clawhub_exe, "install", "ai-agent-usage-stats", "--force"],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                     timeout=120,
                 )
@@ -4650,7 +4650,7 @@ def main():
                     _refresh_wrapper()
                     print(f"✅ 已更新到 v{new_ver}，请运行 agent-usage-stats --version 确认")
                 else:
-                    print(f"⚠️ 文件复制后版本仍为 v{old_ver}，请手动执行: cd ~ && clawhub install agent-usage-stats --force")
+                    print(f"⚠️ 文件复制后版本仍为 v{old_ver}，请手动执行: cd ~ && clawhub install ai-agent-usage-stats --force")
             else:
                 # 找不到更新文件，但 clawhub 返回成功，可能同目录已更新
                 new_ver = _read_version(skill_dir)
@@ -4658,15 +4658,15 @@ def main():
                     _refresh_wrapper()
                     print(f"✅ 已更新到 v{new_ver}，请运行 agent-usage-stats --version 确认")
                 else:
-                    print(f"⚠️ 版本未变化 (仍为 v{old_ver})，请手动执行: clawhub install agent-usage-stats --force")
+                    print(f"⚠️ 版本未变化 (仍为 v{old_ver})，请手动执行: clawhub install ai-agent-usage-stats --force")
         except FileNotFoundError:
             print("❌ 未找到 clawhub CLI，请先安装: npm install -g clawhub")
-            print("   然后手动执行: clawhub update agent-usage-stats")
+            print("   然后手动执行: clawhub update ai-agent-usage-stats")
         except subprocess.TimeoutExpired:
-            print("⚠️ 更新超时，请检查网络后手动执行: clawhub update agent-usage-stats")
+            print("⚠️ 更新超时，请检查网络后手动执行: clawhub update ai-agent-usage-stats")
         except Exception as e:
             print(f"⚠️ 更新失败: {e}")
-            print("   请手动执行: clawhub update agent-usage-stats")
+            print("   请手动执行: clawhub update ai-agent-usage-stats")
         return
 
     # ── list-backends ──
