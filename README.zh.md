@@ -1,5 +1,7 @@
 # agent-usage-stats — AI Agent Token 消耗统计工具
 
+[中文](README.md) | [English](README.en.md)
+
 统计本机 AI 编程助手的 token 消耗，支持多 Agent、多模型、多时间段查询与导出。
 
 ## 为什么选择 agent-usage-stats
