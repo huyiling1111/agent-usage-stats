@@ -1,5 +1,29 @@
 # Changelog
 
+## v2.6.5 (2026-05-25)
+
+### 修复
+
+- **Python 3.10 价格加载失败**：`tomllib` 需 Python 3.11+，导致 `model_prices.toml` 加载为空。新增内置极简 TOML 解析器 `_parse_simple_toml()`，Python < 3.11 时 fallback 使用
+
+## v2.6.4 (2026-05-25)
+
+### 修复
+
+- **Python < 3.12 兼容性**：f-string 内嵌套双引号（`f"...{pc.get("currency","CNY")}..."`）在 Python 3.12 之前报 `SyntaxError: unmatched '('`，共 4 处改为单引号
+
+## v2.6.3 (2026-05-24)
+
+### 修复
+
+- **月度导出费用列错误**：年度 XLSX/CSV 导出时 `monthly_data` 未存储 cost 字段，导出函数直接 `md.get('cost', 0)` 全为 0。改为在收集月度数据时预计算 cost，四个导出函数统一格式化
+
+## v2.6.2 (2026-05-24)
+
+### 修复
+
+- **Claude Code 调用次数和缓存 token 重复统计（严重 bug）**：CC JSONL 将同一 API 响应的 usage 存多份（时间戳略有差异），导致 69% 消息为重复。按 `(model, input, output, cache)` 去重后，v4-pro 从 14,870 调用/3.14B 缓存降至 4,586/0.97B，与 DeepSeek 官网账单吻合。此前因该 bug 误判「价格计算不准确」而移除的价格功能，现已恢复
+
 ## v2.6.1 (2026-05-23)
 
 ### 修复
@@ -40,7 +64,7 @@
 
 ### 已知限制
 
-- **DeepSeek Anthropic 端点费用偏差**：Claude Code 通过 `api.deepseek.com/anthropic` 使用 DeepSeek 模型时，API 返回的 `usage`（记录在 JSONL 中）与实际计费 tokens 使用不同 tokenizer 计数，导致预估费用偏高约 2-3 倍。此偏差源于 API 端点行为，非 ai-agent-usage-stats 计算公式或价格错误。直接使用 DeepSeek 原生 API（如 Hermes）的费用预估是准确的。
+- **DeepSeek Anthropic 端点费用偏差**：Claude Code 通过 `api.deepseek.com/anthropic` 使用 DeepSeek 模型时，API 返回的 `usage`（记录在 JSONL 中）与实际计费 tokens 使用不同 tokenizer 计数，导致预估费用偏高约 2-3 倍。此偏差源于 API 端点行为，非ai-agent-usage-stats 计算公式或价格错误。直接使用 DeepSeek 原生 API（如 Hermes）的费用预估是准确的。
 
 ## v2.5.8 (2026-05-22)
 
@@ -160,7 +184,7 @@
 
 ### 新增
 - **CSV 导出**：简单/年度 × 单/多 Agent 全覆盖
-- **`agent-usage-stats update`**：自更新指令，调用 `clawhub update ai-agent-usage-stats`
+- **`agent-usage-stats update`**：自更新指令，调用 `clawhub update agent-usage-stats`
 
 ## v2.4.2 (2026-05-20)
 

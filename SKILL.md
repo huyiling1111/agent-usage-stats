@@ -1,3 +1,11 @@
+<!--
+ * @Author: 胡怡玲 1052859577@qq.com
+ * @Date: 2026-05-25 13:57:38
+ * @LastEditors: 胡怡玲 1052859577@qq.com
+ * @LastEditTime: 2026-05-25 14:12:06
+ * @FilePath: \agent-usage-stats\SKILL.md
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 ---
 name: ai-agent-usage-stats
 description: "选择要监控的 AI 助手 → 查看 token 消耗。支持 Hermes / Claude Code / CodeX / OpenClaw，每次都让你选"

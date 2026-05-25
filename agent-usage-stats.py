@@ -52,8 +52,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
-
-VERSION = "2.6.1"
+VERSION = "2.6.5"
 
 # 强制 stdout 行缓冲 + UTF-8，使 --watch 模式的输出实时可见
 try:
@@ -251,26 +250,17 @@ def _codex_collect_via_wsl(db_path, from_ts=None, to_ts=None):
 # 支持 setup 时自动检测 Agent 路径，保存到配置文件
 # 运行时优先读取配置，无配置时回退到标准路径
 
-COMMAND_NAME = "agent-usage-stats"
-LEGACY_COMMAND_NAMES = ("token-stats",)
-
-CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config", COMMAND_NAME)
-LEGACY_CONFIG_DIRS = [
-    os.path.join(os.path.expanduser("~"), ".config", name)
-    for name in LEGACY_COMMAND_NAMES
-]
+CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config", "agent-usage-stats")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "paths.json")
 
 
 def _load_agent_paths() -> dict:
     """加载已保存的 Agent 数据路径配置"""
-    for path in [CONFIG_FILE] + [os.path.join(d, "paths.json") for d in LEGACY_CONFIG_DIRS]:
-        try:
-            with open(path, encoding="utf-8") as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            continue
-    return {}
+    try:
+        with open(CONFIG_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
 def _save_agent_paths(paths: dict):
@@ -361,12 +351,58 @@ def fmt_pct(pct: float) -> str:
 _model_prices_cache = None
 
 
+def _parse_simple_toml(path: str) -> dict:
+    """极简 TOML 解析器，仅支持 [section] + key = value（兼容 Python < 3.11）"""
+    import re
+    data = {}
+    current_section = None
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            # 注释在行尾
+            line = re.sub(r'\s+#.*$', '', line)
+            # [section] or ["section.with.dots"]
+            m = re.match(r'^\[(.+)\]$', line)
+            if m:
+                section = m.group(1).strip()
+                # 去引号（如 ["claude-haiku-3.5"]）
+                if section.startswith('"') and section.endswith('"'):
+                    section = section[1:-1]
+                elif section.startswith("'") and section.endswith("'"):
+                    section = section[1:-1]
+                if section not in data:
+                    data[section] = {}
+                current_section = data[section]
+                continue
+            # key = value
+            if "=" in line and current_section is not None:
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip()
+                # 字符串值去引号
+                if val.startswith('"') and val.endswith('"'):
+                    val = val[1:-1]
+                elif val.startswith("'") and val.endswith("'"):
+                    val = val[1:-1]
+                # 数字转换
+                else:
+                    try:
+                        val = float(val)
+                        if val == int(val):
+                            val = int(val)
+                    except ValueError:
+                        pass
+                current_section[key] = val
+    return data
+
+
 def _load_model_prices() -> dict:
     """加载 model_prices.toml，失败返回 {}。结果缓存。"""
     global _model_prices_cache
     if _model_prices_cache is not None:
         return _model_prices_cache
-    # 查找配置文件：先找项目根目录，再找脚本所在目录
     candidates = [
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "model_prices.toml"),
         os.path.join(os.getcwd(), "model_prices.toml"),
@@ -379,7 +415,7 @@ def _load_model_prices() -> dict:
                     with open(cp, "rb") as f:
                         data = tomllib.load(f)
                 else:
-                    data = {}
+                    data = _parse_simple_toml(cp)
             except Exception:
                 data = {}
             _model_prices_cache = data
@@ -453,7 +489,7 @@ def _calc_total_cost(per_model_list: list) -> dict[str, float]:
             inp = pm.get("input", 0) or 0
             out = pm.get("output", 0) or 0
             cache = pm.get("cache", 0) or 0
-            cur = pc.get("currency", "CNY")
+            cur = pc.get('currency', 'CNY')
             totals[cur] = totals.get(cur, 0.0) + _calc_cost(inp, out, cache, pc)
     return totals
 
@@ -1209,7 +1245,7 @@ class BaseAgent(ABC):
                     d_cache = mv.get("cache", 0) - bl.get("cache", 0)
                     pc = _get_model_price(mn)
                     if pc and (d_in or d_out or d_cache):
-                        delta_cost += _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get("currency", "CNY"))
+                        delta_cost += _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get('currency', 'CNY'))
                 if delta_cost > 0:
                     summary_parts.append(f"≈¥{delta_cost:.4f}")
                 print(f"── [{ts}] {' '.join(summary_parts)} ──")
@@ -1261,7 +1297,7 @@ class BaseAgent(ABC):
                     if delta_has_price:
                         pc = _get_model_price(mn)
                         if pc and (d_in or d_out or d_cache):
-                            dc = _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get("currency", "CNY"))
+                            dc = _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get('currency', 'CNY'))
                             cols.append(f"≈¥{dc:.4f}")
                         else:
                             cols.append("-")
@@ -1473,7 +1509,7 @@ class BaseAgent(ABC):
                         any_d_cache = True
                     pc = _get_model_price(mn)
                     if pc:
-                        dc = _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get("currency", "CNY"))
+                        dc = _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get('currency', 'CNY'))
                         total_d_cost += dc
                     delta_data.append((mn, d_tok, d_in, d_out, d_cache, d_calls, pc))
 
@@ -1487,7 +1523,7 @@ class BaseAgent(ABC):
                         cols.append(f"+{fmt_num(d_cache)}存")
                     cols.append(f"+{d_calls}调用")
                     if pc and (d_in or d_out or d_cache):
-                        dc = _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get("currency", "CNY"))
+                        dc = _to_cny(_calc_cost(d_in, d_out, d_cache, pc), pc.get('currency', 'CNY'))
                         cols.append(f"≈¥{dc:.4f}")
                     inc_rows.append(cols)
                 aligned = _align_rows(inc_rows)
@@ -1827,6 +1863,7 @@ class ClaudeCodeAgent(BaseAgent):
             self._cached_sub_count = 0
             self._cached_project_count = 0
             messages = []
+            _seen = set()  # 去重：(model, inp, out, cache)
             projects = set()
 
             if sessions:
@@ -1854,12 +1891,21 @@ class ClaudeCodeAgent(BaseAgent):
                                     msg_ts = dt.timestamp()
                                 except (ValueError, TypeError):
                                     msg_ts = None
+                                inp = usage.get('input_tokens', 0)
+                                out = usage.get('output_tokens', 0)
+                                cache = usage.get('cache_read_input_tokens', 0)
+                                # Claude Code JSONL 会将同一 API 响应的 usage 存多份
+                                # （时间戳可能略有差异），需按 (model, inp, out, cache) 去重
+                                key = (model, inp, out, cache)
+                                if key in _seen:
+                                    continue
+                                _seen.add(key)
                                 messages.append({
                                     'ts': msg_ts,
                                     'model': model,
-                                    'input': usage.get('input_tokens', 0),
-                                    'output': usage.get('output_tokens', 0),
-                                    'cache': usage.get('cache_read_input_tokens', 0),
+                                    'input': inp,
+                                    'output': out,
+                                    'cache': cache,
                                 })
                     except Exception:
                         continue
@@ -3007,6 +3053,7 @@ def _write_xlsx_simple(filepath, agent_name, agent_display, filtered_models):
         pc = _get_model_price(model)
         if pc:
             cost_val = _calc_cost(inp, out, cache, pc)
+            sy = "¥" if pc.get('currency','CNY')=="CNY" else "$"
             cost_str = f"≈¥{_to_cny(cost_val, pc.get('currency', 'CNY')):.4f}"
         else:
             cost_str = "-"
@@ -3067,8 +3114,9 @@ def _write_xlsx_multi_simple(filepath, results):
             pc = _get_model_price(model)
             if pc:
                 cv = _calc_cost(inp, out, cache, pc)
+                sy = "¥" if pc.get('currency','CNY')=="CNY" else "$"
                 cs = f"≈¥{_to_cny(cv, pc.get('currency', 'CNY')):.4f}"
-                at_cost += cv; at_cur = pc.get("currency","CNY")
+                at_cost += cv; at_cur = pc.get('currency','CNY')
             else:
                 cs = "-"
             wb.add_row('MultiAgent', [agent.display_name(), model, inp, out, cache, cr_str, calls, inp + out, inp + out + cache, cs])
@@ -3137,8 +3185,8 @@ def _write_xlsx_monthly(filepath, agent_name, agent_display, monthly_data, all_m
                 else:
                     v = md.get(metric, 0)
                 tot += v
-                vals.append((int(v), 0))
-            vals.append((int(tot), 0))
+                vals.append((v if metric != "cost" else (f"≈¥{v:.4f}" if v else "0"), 0))
+            vals.append((tot if metric != "cost" else (f"≈¥{tot:.4f}" if tot else "0"), 0))
             wb.add_row(agent_display, vals)
             row_num += 1
         merges.append((ms, 2, row_num - 1, 2))  # Model merge
@@ -3164,8 +3212,8 @@ def _write_xlsx_monthly(filepath, agent_name, agent_display, monthly_data, all_m
                     else:
                         ct += md.get(metric, 0)
                 gt_all += ct
-                vals.append((int(ct), TOT_STYLE))
-            vals.append((int(gt_all), TOT_STYLE))
+                vals.append((ct if metric != "cost" else (f"≈¥{ct:.4f}" if ct else "0"), TOT_STYLE))
+            vals.append((gt_all if metric != "cost" else (f"≈¥{gt_all:.4f}" if gt_all else "0"), TOT_STYLE))
             wb.add_row(agent_display, vals)
             row_num += 1
         merges.append((gt, 1, row_num - 1, 1))
@@ -3207,8 +3255,8 @@ def _write_xlsx_multi_monthly(filepath, agents_monthly, all_months, agent_order)
                     else:
                         v = md.get(metric, 0)
                     tot += v
-                    vals.append((int(v), 0))
-                vals.append((int(tot), 0))
+                    vals.append((v if metric != "cost" else (f"≈¥{v:.4f}" if v else "0"), 0))
+                vals.append((tot if metric != "cost" else (f"≈¥{tot:.4f}" if tot else "0"), 0))
                 rows_data.append((vals, 'data', agent_name, agent_display, model))
         # 多模型时展示 Agent 合计
         if len(all_models) > 1:
@@ -3229,7 +3277,7 @@ def _write_xlsx_multi_monthly(filepath, agents_monthly, all_months, agent_order)
                         else:
                             ct += md.get(metric, 0)
                     ag_total += ct
-                    vals.append((int(ct), TOT_STYLE))
+                    vals.append((ct if metric != "cost" else (f"≈¥{ct:.4f}" if ct else "0"), TOT_STYLE))
                 vals.append((int(ag_total), TOT_STYLE))
                 rows_data.append((vals, 'agent_subtotal', agent_name, agent_display, None))
 
@@ -3318,8 +3366,8 @@ def _write_xlsx_multi_monthly(filepath, agents_monthly, all_months, agent_order)
                     else:
                         ct += md.get(metric, 0)
             gt_all += ct
-            vals.append((int(ct), TOT_STYLE))
-        vals.append((int(gt_all), TOT_STYLE))
+            vals.append((ct if metric != "cost" else (f"≈¥{ct:.4f}" if ct else "0"), TOT_STYLE))
+        vals.append((gt_all if metric != "cost" else (f"≈¥{gt_all:.4f}" if gt_all else "0"), TOT_STYLE))
         wb.add_row(sheet_name, vals)
         row_num += 1
     merges.append((gt, 1, row_num - 1, 1))
@@ -3351,8 +3399,9 @@ def _write_csv_simple(filepath, agent_name, agent_display, filtered_models):
             pc = _get_model_price(model)
             if pc:
                 cv = _calc_cost(inp, out, cache, pc)
+                sy = "¥" if pc.get('currency','CNY')=="CNY" else "$"
                 cs = f"≈¥{_to_cny(cv, pc.get('currency', 'CNY')):.4f}"
-                at_cost += cv; at_cur = pc.get("currency","CNY")
+                at_cost += cv; at_cur = pc.get('currency','CNY')
             else:
                 cs = "-"
             w.writerow([agent_display, model, inp, out, cache, cr_str, calls, inp + out, inp + out + cache, cs])
@@ -3392,8 +3441,9 @@ def _write_csv_multi_simple(filepath, results):
                 pc = _get_model_price(model)
                 if pc:
                     cv = _calc_cost(inp, out, cache, pc)
+                    sy = "¥" if pc.get('currency','CNY')=="CNY" else "$"
                     cs = f"≈¥{_to_cny(cv, pc.get('currency', 'CNY')):.4f}"
-                    at_cost += cv; at_cur = pc.get("currency","CNY")
+                    at_cost += cv; at_cur = pc.get('currency','CNY')
                 else:
                     cs = "-"
                 w.writerow([agent.display_name(), model, inp, out, cache, cr_str, calls, inp + out, inp + out + cache, cs])
@@ -3437,8 +3487,8 @@ def _write_csv_monthly(filepath, agent_name, agent_display, monthly_data, all_mo
                     else:
                         v = md.get(metric, 0)
                     tot += v
-                    row.append(int(v))
-                row.append(int(tot))
+                    row.append(v if metric != "cost" else (f"≈¥{v:.4f}" if v else "0"))
+                row.append(tot if metric != "cost" else (f"≈¥{tot:.4f}" if tot else "0"))
                 w.writerow(row)
         # 多模型时展示合计
         if len(all_models) > 1:
@@ -3458,8 +3508,8 @@ def _write_csv_monthly(filepath, agent_name, agent_display, monthly_data, all_mo
                     else:
                         ct += md.get(metric, 0)
                 gt_all += ct
-                row.append(int(ct))
-            row.append(int(gt_all))
+                row.append(ct if metric != "cost" else (f"≈¥{ct:.4f}" if ct else "0"))
+            row.append(gt_all if metric != "cost" else (f"≈¥{gt_all:.4f}" if gt_all else "0"))
             w.writerow(row)
 
 
@@ -3487,8 +3537,8 @@ def _write_csv_multi_monthly(filepath, agent_order, all_months):
                         else:
                             v = md.get(metric, 0)
                         tot += v
-                        row.append(int(v))
-                    row.append(int(tot))
+                        row.append(v if metric != "cost" else (f"≈¥{v:.4f}" if v else "0"))
+                    row.append(tot if metric != "cost" else (f"≈¥{tot:.4f}" if tot else "0"))
                     w.writerow(row)
             # 多模型时展示 Agent 合计
             if len(all_models) > 1:
@@ -3508,8 +3558,8 @@ def _write_csv_multi_monthly(filepath, agent_order, all_months):
                             else:
                                 ct += md.get(metric, 0)
                         ag_total += ct
-                        row.append(int(ct))
-                    row.append(int(ag_total))
+                        row.append(ct if metric != "cost" else (f"≈¥{ct:.4f}" if ct else "0"))
+                    row.append(ag_total if metric != "cost" else (f"≈¥{ag_total:.4f}" if ag_total else "0"))
                     w.writerow(row)
         # 全部总计
         if len(agent_order) > 1:
@@ -3528,8 +3578,8 @@ def _write_csv_multi_monthly(filepath, agent_order, all_months):
                             else:
                                 ct += md.get(metric, 0)
                     gt_all += ct
-                    row.append(int(ct))
-                row.append(int(gt_all))
+                    row.append(ct if metric != "cost" else (f"≈¥{ct:.4f}" if ct else "0"))
+                row.append(gt_all if metric != "cost" else (f"≈¥{gt_all:.4f}" if gt_all else "0"))
                 w.writerow(row)
 
 
@@ -3552,13 +3602,20 @@ def export_interactive(data: AgentData, agent: BaseAgent,
             for idx, (label, m_start, m_end) in enumerate(months, 1):
                 print(f"  ⏳ 正在收集 {label} 数据 ({idx}/{total_months})...", end="\r", flush=True)
                 m_data = agent.collect(from_ts=m_start, to_ts=m_end)
-                monthly_data[label] = {
-                    pm.get("model", "unknown"): {
-                        "input": pm.get("input", 0), "output": pm.get("output", 0),
-                        "cache": pm.get("cache", 0), "calls": pm.get("calls", 0),
+                monthly_data[label] = {}
+                for pm in (m_data.per_model or []):
+                    if _skip_model(pm):
+                        continue
+                    mn = pm.get("model", "unknown")
+                    inp = pm.get("input", 0) or 0
+                    out = pm.get("output", 0) or 0
+                    cache = pm.get("cache", 0) or 0
+                    pc = _get_model_price(mn)
+                    cost = _to_cny(_calc_cost(inp, out, cache, pc), pc.get('currency', 'CNY')) if pc else 0
+                    monthly_data[label][mn] = {
+                        "input": inp, "output": out, "cache": cache,
+                        "calls": pm.get("calls", 0), "cost": cost,
                     }
-                    for pm in (m_data.per_model or []) if not _skip_model(pm)
-                }
             print(" " * 40, end="\r")
             # 从月度数据汇总 filtered_models
             all_models = sorted({m for d in monthly_data.values() for m in d})
@@ -3745,13 +3802,20 @@ def export_multi(results: list[tuple[BaseAgent, AgentData]],
                 for idx, (label, m_start, m_end) in enumerate(months, 1):
                     print(f"  ⏳ 正在收集 {agent.display_name()} {label} 数据 ({idx}/{total_months}) [{agent_idx}/{total_agents}]...", end="\r", flush=True)
                     m_data = agent.collect(from_ts=m_start, to_ts=m_end)
-                    monthly_data[label] = {
-                        pm.get("model", "unknown"): {
-                            "input": pm.get("input", 0), "output": pm.get("output", 0),
-                            "cache": pm.get("cache", 0), "calls": pm.get("calls", 0),
+                    monthly_data[label] = {}
+                    for pm in (m_data.per_model or []):
+                        if _skip_model(pm):
+                            continue
+                        mn = pm.get("model", "unknown")
+                        inp = pm.get("input", 0) or 0
+                        out = pm.get("output", 0) or 0
+                        cache = pm.get("cache", 0) or 0
+                        pc = _get_model_price(mn)
+                        cost = _to_cny(_calc_cost(inp, out, cache, pc), pc.get('currency', 'CNY')) if pc else 0
+                        monthly_data[label][mn] = {
+                            "input": inp, "output": out, "cache": cache,
+                            "calls": pm.get("calls", 0), "cost": cost,
                         }
-                        for pm in (m_data.per_model or []) if not _skip_model(pm)
-                    }
                 print(" " * 60, end="\r")
                 agent_order.append((agent.name(), agent.display_name(), monthly_data))
             print(" " * 60, end="\r")
@@ -3861,7 +3925,7 @@ def export_multi(results: list[tuple[BaseAgent, AgentData]],
         # Step 3: 写文件
         timestamp = now.strftime("%Y%m%d_%H%M%S")
         agent_names = "+".join(agent.name() for agent, _ in results)
-        if is_year:
+      if is_year:
             filename = f"agent-usage-stats_{agent_names}_yearly_{timestamp}.{fmt}"
         else:
             filename = f"agent-usage-stats_{agent_names}_{timestamp}.{fmt}"
@@ -4041,13 +4105,13 @@ def run_compare(agent: BaseAgent, a_label: str, b_label: str):
             models_a.get(mn, {}).get("input",0) or 0,
             models_a.get(mn, {}).get("output",0) or 0,
             models_a.get(mn, {}).get("cache",0) or 0, pc),
-            pc.get("currency","CNY"))
+            pc.get('currency','CNY'))
             for mn in all_models if (pc := _get_model_price(mn)))
         gt_b_cost = sum(_to_cny(_calc_cost(
             models_b.get(mn, {}).get("input",0) or 0,
             models_b.get(mn, {}).get("output",0) or 0,
             models_b.get(mn, {}).get("cache",0) or 0, pc),
-            pc.get("currency","CNY"))
+            pc.get('currency','CNY'))
             for mn in all_models if (pc := _get_model_price(mn)))
         gt_a_cost_str = f"≈¥{gt_a_cost:.2f}" if gt_a_cost > 0 else "-"
         gt_b_cost_str = f"≈¥{gt_b_cost:.2f}" if gt_b_cost > 0 else "-"
@@ -4159,7 +4223,7 @@ def show_all(*, from_ts: float = None, to_ts: float = None):
                         grand_tca += calls
                         pc = _get_model_price(pm.get("model", ""))
                         if pc:
-                            cur = pc.get("currency", "CNY")
+                            cur = pc.get('currency', 'CNY')
                             grand_costs[cur] = grand_costs.get(cur, 0.0) + _calc_cost(inp, out, cache, pc)
                     agent_count += 1
                 print(data.raw)
@@ -4283,7 +4347,7 @@ def _add_to_path_unix(bin_dir, rc_file):
 
 
 def _remove_from_path_unix(bin_dir, rc_file):
-    """从 shell 配置文件中移除当前和旧命令名的 PATH 标记块。"""
+    """从 shell 配置文件中移除 agent-usage-stats PATH 标记块。"""
     rc_path = os.path.expanduser(rc_file)
     if not os.path.exists(rc_path):
         return False
@@ -4295,16 +4359,10 @@ def _remove_from_path_unix(bin_dir, rc_file):
     try:
         with open(rc_path, "r", encoding="utf-8") as f:
             content = f.read()
-        marker_pairs = [(PATH_MARKER_START, PATH_MARKER_END)]
-        marker_pairs.extend(
-            (f"# >>> {name} PATH >>>", f"# <<< {name} PATH <<<")
-            for name in LEGACY_COMMAND_NAMES
-        )
-        for marker_start, marker_end in marker_pairs:
-            for prefix in ("\n", ""):
-                pattern = f"{prefix}{marker_start}\n{export_line}\n{marker_end}\n"
-                if pattern in content:
-                    content = content.replace(pattern, "")
+        for prefix in ("\n", ""):
+            pattern = f"{prefix}{PATH_MARKER_START}\n{export_line}\n{PATH_MARKER_END}\n"
+            if pattern in content:
+                content = content.replace(pattern, "")
         with open(rc_path, "w", encoding="utf-8") as f:
             f.write(content)
         return True
@@ -4318,7 +4376,7 @@ def _remove_from_path_unix(bin_dir, rc_file):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="agent-usage-stats — 选个 Agent 看它的 token 消耗",
+  description="agent-usage-stats — 选个 Agent 看它的 token 消耗",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 命令大全:
@@ -4398,7 +4456,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 兼容旧用法：agent-usage-stats setup / uninstall / update → 当作对应 flag
+    # agent-usage-stats setup / uninstall / update → 当作对应 flag
     if args.setup_pos is True or args.setup_pos == "setup":
         args.setup = True
     if args.setup_pos == "uninstall":
@@ -4421,12 +4479,12 @@ def main():
 
         # 1. 创建包装器
         if is_win:
-            target = os.path.join(bin_dir, f"{COMMAND_NAME}.cmd")
+            target = os.path.join(bin_dir, "agent-usage-stats.cmd")
             wrapper = f'@python "{script_path}" %*\n'
             with open(target, "w", encoding="utf-8") as f:
                 f.write(wrapper)
         else:
-            target = os.path.join(bin_dir, COMMAND_NAME)
+            target = os.path.join(bin_dir, "agent-usage-stats")
             wrapper = (
                 "#!/bin/sh\n"
                 f'exec python3 "{script_path}" "$@"\n'
@@ -4436,13 +4494,6 @@ def main():
             os.chmod(target, 0o755)
 
         print(f"✅ 已创建全局命令: {target}")
-
-        # 清理旧命令包装器，避免旧名字继续可用。
-        for old_name in LEGACY_COMMAND_NAMES:
-            old_target = os.path.join(bin_dir, f"{old_name}.cmd" if is_win else old_name)
-            if old_target != target and os.path.exists(old_target):
-                os.remove(old_target)
-                print(f"✅ 已移除旧命令: {old_target}")
 
         # 2. 自动添加 PATH
         print("⏳ 正在添加到系统 PATH...", end="", flush=True)
@@ -4466,8 +4517,7 @@ def main():
                         content = f.read()
                     alias_lines = []
                     for i, line in enumerate(content.splitlines(), 1):
-                        stripped = line.strip()
-                        if any(f"alias {name}" in stripped for name in (COMMAND_NAME, *LEGACY_COMMAND_NAMES)):
+                        if "alias agent-usage-stats" in line.strip():
                             alias_lines.append(f"  {rc_file} 第 {i} 行: {line.strip()}")
                     if alias_lines:
                         print()
@@ -4499,15 +4549,15 @@ def main():
         bin_dir = os.path.join(os.path.expanduser("~"), ".local", "bin")
 
         # 1. 删除包装器
-        removed_any = False
-        for name in (COMMAND_NAME, *LEGACY_COMMAND_NAMES):
-            target = os.path.join(bin_dir, f"{name}.cmd" if is_win else name)
-            if os.path.exists(target):
-                os.remove(target)
-                removed_any = True
-                print(f"✅ 已删除: {target}")
-        if not removed_any:
-            print(f"ℹ️  全局命令不存在: {os.path.join(bin_dir, COMMAND_NAME)}")
+        if is_win:
+            target = os.path.join(bin_dir, "agent-usage-stats.cmd")
+        else:
+            target = os.path.join(bin_dir, "agent-usage-stats")
+        if os.path.exists(target):
+            os.remove(target)
+            print(f"✅ 已删除: {target}")
+        else:
+            print(f"ℹ️  全局命令不存在: {target}")
 
         # 2. 清理 PATH
         print("⏳ 正在清理系统 PATH...", end="", flush=True)
@@ -4519,16 +4569,14 @@ def main():
         print("\r✅ 已清理系统 PATH                    ")
 
         # 3. 清理配置文件
-        config_dirs = [CONFIG_DIR, *LEGACY_CONFIG_DIRS]
-        for config_dir in config_dirs:
-            if not os.path.exists(config_dir):
-                continue
+        config_dir = os.path.join(os.path.expanduser("~"), ".config", "agent-usage-stats")
+        if os.path.exists(config_dir):
             import shutil
             shutil.rmtree(config_dir, ignore_errors=True)
             print(f"✅ 已清理配置文件: {config_dir}")
 
         print()
-        print("卸载完成。如需彻底删除技能文件，请执行: clawhub uninstall ai-agent-usage-stats")
+        print("卸载完成。如需彻底删除技能文件，请执行: clawhub uninstall agent-usage-stats")
         return
 
     # ── update ──
@@ -4556,19 +4604,10 @@ def main():
         def _refresh_wrapper():
             """刷新 ~/.local/bin 下的 wrapper 脚本。"""
             bin_dir = os.path.join(os.path.expanduser("~"), ".local", "bin")
-            unix_target = os.path.join(bin_dir, COMMAND_NAME)
-            win_target = os.path.join(bin_dir, f"{COMMAND_NAME}.cmd")
-            legacy_targets = [
-                os.path.join(bin_dir, name)
-                for name in LEGACY_COMMAND_NAMES
-            ] + [
-                os.path.join(bin_dir, f"{name}.cmd")
-                for name in LEGACY_COMMAND_NAMES
-            ]
-            target = unix_target if os.path.exists(unix_target) else win_target if os.path.exists(win_target) else None
-            if target is None and any(os.path.exists(p) for p in legacy_targets):
-                target = win_target if sys.platform == "win32" else unix_target
-            if target is None:
+            target = os.path.join(bin_dir, "agent-usage-stats")
+            if not os.path.exists(target):
+                target = os.path.join(bin_dir, "agent-usage-stats.cmd")
+            if not os.path.exists(target):
                 return
             with open(target, "w", encoding="utf-8") as f:
                 script_path = os.path.abspath(__file__)
@@ -4578,9 +4617,6 @@ def main():
                     f.write("#!/bin/sh\n"
                             f'exec python3 "{script_path}" "$@"\n')
                     os.chmod(target, 0o755)
-            for old_target in legacy_targets:
-                if old_target != target and os.path.exists(old_target):
-                    os.remove(old_target)
 
         def _read_version(path):
             """从 agent-usage-stats.py 读取 VERSION 字符串。"""
@@ -4599,7 +4635,7 @@ def main():
         try:
             old_ver = VERSION
             result = subprocess.run(
-                [clawhub_exe, "update", "ai-agent-usage-stats", "--no-input"],
+                [clawhub_exe, "update", "agent-usage-stats", "--no-input"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 timeout=120,
             )
@@ -4608,7 +4644,7 @@ def main():
                 print(output)
 
             if result.returncode != 0:
-                print(f"⚠️ 更新可能失败 (exit {result.returncode})，请手动执行: clawhub update ai-agent-usage-stats")
+                print(f"⚠️ 更新可能失败 (exit {result.returncode})，请手动执行: clawhub update agent-usage-stats")
                 return
 
             # 搜索 ClawHub 安装的新文件（不同平台/版本路径可能不同）
@@ -4616,7 +4652,7 @@ def main():
             search_dirs = [
                 os.path.join(script_dir, "skills", "agent-usage-stats"),
                 os.path.join(os.path.expanduser("~"), "skills", "agent-usage-stats"),
-                os.path.join(os.path.expanduser("~"), ".clawhub", "skills", "ai-agent-usage-stats"),
+                os.path.join(os.path.expanduser("~"), ".clawhub", "skills", "agent-usage-stats"),
             ]
             updated_src = None
             for d in search_dirs:
@@ -4629,7 +4665,7 @@ def main():
             if updated_src is None:
                 print("  ⏳ 常规更新未生效，尝试强制重装...")
                 result2 = subprocess.run(
-                    [clawhub_exe, "install", "ai-agent-usage-stats", "--force"],
+                    [clawhub_exe, "install", "agent-usage-stats", "--force"],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                     timeout=120,
                 )
@@ -4650,7 +4686,7 @@ def main():
                     _refresh_wrapper()
                     print(f"✅ 已更新到 v{new_ver}，请运行 agent-usage-stats --version 确认")
                 else:
-                    print(f"⚠️ 文件复制后版本仍为 v{old_ver}，请手动执行: cd ~ && clawhub install ai-agent-usage-stats --force")
+                    print(f"⚠️ 文件复制后版本仍为 v{old_ver}，请手动执行: cd ~ && clawhub install agent-usage-stats --force")
             else:
                 # 找不到更新文件，但 clawhub 返回成功，可能同目录已更新
                 new_ver = _read_version(skill_dir)
@@ -4658,15 +4694,15 @@ def main():
                     _refresh_wrapper()
                     print(f"✅ 已更新到 v{new_ver}，请运行 agent-usage-stats --version 确认")
                 else:
-                    print(f"⚠️ 版本未变化 (仍为 v{old_ver})，请手动执行: clawhub install ai-agent-usage-stats --force")
+                    print(f"⚠️ 版本未变化 (仍为 v{old_ver})，请手动执行: clawhub install agent-usage-stats --force")
         except FileNotFoundError:
             print("❌ 未找到 clawhub CLI，请先安装: npm install -g clawhub")
-            print("   然后手动执行: clawhub update ai-agent-usage-stats")
+            print("   然后手动执行: clawhub update agent-usage-stats")
         except subprocess.TimeoutExpired:
-            print("⚠️ 更新超时，请检查网络后手动执行: clawhub update ai-agent-usage-stats")
+            print("⚠️ 更新超时，请检查网络后手动执行: clawhub update agent-usage-stats")
         except Exception as e:
             print(f"⚠️ 更新失败: {e}")
-            print("   请手动执行: clawhub update ai-agent-usage-stats")
+            print("   请手动执行: clawhub update agent-usage-stats")
         return
 
     # ── list-backends ──
@@ -4833,7 +4869,7 @@ def main():
                             gtca += pm.get("calls", 0) or 0
                             pc = _get_model_price(pm.get("model", ""))
                             if pc:
-                                cur = pc.get("currency", "CNY")
+                                cur = pc.get('currency', 'CNY')
                                 gt_costs[cur] = gt_costs.get(cur, 0.0) + _calc_cost(inp, out, cache, pc)
                     gtt = gti + gto
                     print(f"\n{'═'*50}")
