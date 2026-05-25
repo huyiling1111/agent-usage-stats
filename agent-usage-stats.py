@@ -3925,7 +3925,7 @@ def export_multi(results: list[tuple[BaseAgent, AgentData]],
         # Step 3: 写文件
         timestamp = now.strftime("%Y%m%d_%H%M%S")
         agent_names = "+".join(agent.name() for agent, _ in results)
-      if is_year:
+        if is_year:
             filename = f"agent-usage-stats_{agent_names}_yearly_{timestamp}.{fmt}"
         else:
             filename = f"agent-usage-stats_{agent_names}_{timestamp}.{fmt}"
